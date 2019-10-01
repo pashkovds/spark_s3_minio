@@ -2,33 +2,85 @@ version: '2'
 
 services:
 
-  minio1:
+  minio:
     image: minio/minio
+    hostname: minio
     networks:
       - common
-    hostname: minio1
     volumes:
       - data1:/data
     ports:
-      - "9000:9000"
+      - 9000:9000
     environment:
       MINIO_ACCESS_KEY: minio
       MINIO_SECRET_KEY: minio123
     command: server /data
 
-  localspark1:
-    build:
-      context: ./spark_s3
+  research:
+    image: spark_s3
+    hostname: research
     networks:
       - common
-    hostname: localspark1 
+    expose:
+      - 7001
+    environment:
+      SPARK_PUBLIC_DNS: localhost
     ports:
-      - "8888:8888"
-    command: jupyter notebook --allow-root --no-browser --ip=0.0.0.0 --NotebookApp.token='' --NotebookApp.password=''
+      - 8888:8888
+      - 7001:7001
+    command: jupyter notebook --allow-root --no-browser --ip=0.0.0.0 --NotebookApp.token='minio' 
+
+  
+  master:
+    image: spark_s3
+    command: /usr/spark-2.3.0/bin/spark-class org.apache.spark.deploy.master.Master -h master
+    hostname: master
+    networks:
+      - common
+    environment:
+      MASTER: spark://master:7077
+      SPARK_PUBLIC_DNS: localhost
+    expose:
+      - 7001
+      - 7002
+      - 7003
+      - 7004
+      - 7005
+      - 7077
+      - 6066
+    ports:
+      - 4040:4040
+      - 6066:6066
+      - 7077:7077
+      - 8080:8080
+
+  worker:
+    image: spark_s3
+    command: /usr/spark-2.3.0/bin/spark-class org.apache.spark.deploy.worker.Worker spark://master:7077
+    hostname: worker
+    networks:
+      - common
+    environment:
+      SPARK_WORKER_CORES: 2
+      SPARK_WORKER_MEMORY: 2g
+      SPARK_WORKER_PORT: 8881
+      SPARK_WORKER_WEBUI_PORT: 8081
+      SPARK_PUBLIC_DNS: localhost
+    links:
+      - master
+    expose:
+      - 7012
+      - 7013
+      - 7014
+      - 7015
+      - 8881
+    ports:
+      - 8081:8081
 
 
 networks:
   common:
+    driver: bridge
 
 volumes:
   data1:

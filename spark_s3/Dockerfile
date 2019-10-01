@@ -22,5 +22,6 @@ RUN pip3 install notebook boto3 findspark
 RUN pip3 install --upgrade pip setuptools wheel
 RUN pip3 install  pandas
 
-COPY ./notebooks /code
 WORKDIR /code
+COPY ./notebooks /code/default_templates/
+
